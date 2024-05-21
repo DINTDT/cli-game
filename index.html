@@ -1,0 +1,111 @@
+<style>
+	*{background:#000;color:#fff;font-family:Monospace;font-size:calc(100vh / 36)}
+	body{margin:1rem;overflow:clip}
+	#output{white-space:preserve;overflow:hidden;max-height:calc(100vh - 3.5em)}
+	#input{display:inline-block;border:none;outline:none;padding:0;width:calc(100% - 1em)}
+	#prompt{white-space:preserve}
+	line{display:block;min-height:1em;white-space:preserve}
+	
+</style>
+<body id="body">
+<div id="output"></div>
+<span id="prompt">&gt;</span><input id="input" autocomplete="off"></input>
+</body>
+<script src="commands.js"></script>
+<script>
+	avComms={}
+
+	var prompted=false;
+	var promptCallback;
+	var chapter=0;
+	var execCount=0;
+	var uname="";
+	function get(id){return document.getElementById(id)}
+	function print(str,style){
+		if(style)
+			get("output").innerHTML+="<span style='"+style+"'>"+str+"</span>";
+		else
+			get("output").innerHTML+=str;}
+	function println(str,style){print((str?str:"")+'<br>',style);}
+	
+	async function typeout(str,delay){
+		get("input").disabled=true;
+		if(delay>0)
+			for(char of str.split('')){
+				get("output").innerHTML+=char
+				await new Promise(r => setTimeout(r, delay));
+			}
+		else
+			get("output").innerHTML+=str
+		get("input").disabled=false;
+		get("input").focus();
+	}
+	
+	function ask(prompt,callback){
+		setPrompt(prompt);
+		prompted=true;
+		promptCallback=callback;
+	}
+	
+	async function process(command){
+		params=command.split(" ");
+		execCount++;
+		if(params[0] in avComms){
+			avComms[params[0]].execute(params.slice(1,params.length+1))
+		} else {
+			println("Command \""+params[0]+"\" not found");
+		}
+	}
+	
+	function setPrompt(newPrompt){
+		get("prompt").innerText=(newPrompt!=undefined?newPrompt:uname+"> ");
+		get("input").style.width="calc(100% - "+(get("prompt").getBoundingClientRect().width)+"px)"
+	}
+	
+	window.onresize=()=>{
+		get("output").scrollTo(0, get("output").scrollHeight);
+		get("input").style.width="calc(100% - "+(get("prompt").getBoundingClientRect().width)+"px)"
+	}
+	
+	window.onload=async ()=>{
+	
+	//give access to commands HELP and LOGIN at the start
+		avComms["help"] = Help;
+		avComms["login"] = Login;
+		avComms["memo"] = Memo;
+	
+	//focus on the input element whenever the screen is clicked
+		document.onclick=()=>{
+			get("input").focus();
+		}
+	
+	//when Enter is pressed, execute the specified command,
+	//or return the input to a callback function when ask() has been called
+		get("input").onkeydown=async (ev)=>{
+			if(ev.key=="Enter"){
+				println(get("prompt").innerText+(get("input").getAttribute("type")=="password"?"":get("input").value))
+				if(prompted){
+					setPrompt()
+					prompted=false;
+					promptCallback(get("input").value)
+				} else {
+					if(get("input").value.trim()!="")
+						process(get("input").value);
+				}
+				get("input").value='';
+				get("output").scrollTo(0, get("output").scrollHeight);
+			}
+		}
+	
+	//focus on the input element as the window finishes loading
+		setPrompt("");
+		await typeout("Welcome to CLI v1.0\n",30)
+		await typeout("You are currently not logged in.\n",30)
+		await typeout("Type \"help\" to see a list of available commands\n",30)
+		println();
+		setPrompt();
+
+		get("input").focus();
+	}
+	
+</script>
