@@ -20,6 +20,9 @@
 	var chapter=0;
 	var execCount=0;
 	var uname="";
+	var cmdHistory=[];
+	var historyCursor=0;
+	
 	function get(id){return document.getElementById(id)}
 	function print(str,style){
 		if(style)
@@ -28,16 +31,24 @@
 			get("output").innerHTML+=str;}
 	function println(str,style){print((str?str:"")+'<br>',style);}
 	
+	function disablePrompt(){get("input").disabled=true;}
+	function enablePrompt(){get("input").disabled=false;}
+	
+	async function sleep(ms){
+		await new Promise(r => setTimeout(r, ms));
+	}
+	
 	async function typeout(str,delay){
-		get("input").disabled=true;
+		let wasDisabled=get("input").disabled;
+		disablePrompt();
 		if(delay>0)
 			for(char of str.split('')){
 				get("output").innerHTML+=char
-				await new Promise(r => setTimeout(r, delay));
+				await sleep(delay)
 			}
 		else
 			get("output").innerHTML+=str
-		get("input").disabled=false;
+		if(!wasDisabled)enablePrompt();
 		get("input").focus();
 	}
 	
@@ -53,7 +64,7 @@
 		if(params[0] in avComms){
 			avComms[params[0]].execute(params.slice(1,params.length+1))
 		} else {
-			println("Command \""+params[0]+"\" not found");
+			println("Command \""+params[0]+"\" not found","color:#ff0");
 		}
 	}
 	
@@ -71,7 +82,7 @@
 	
 	//give access to commands HELP and LOGIN at the start
 		avComms["help"] = Help;
-		avComms["login"] = Login;
+		avComms["mail"] = Mail;
 		avComms["memo"] = Memo;
 	
 	//focus on the input element whenever the screen is clicked
@@ -83,28 +94,66 @@
 	//or return the input to a callback function when ask() has been called
 		get("input").onkeydown=async (ev)=>{
 			if(ev.key=="Enter"){
+				historyCursor=0;
+				//print the input line, unless it was a password
 				println(get("prompt").innerText+(get("input").getAttribute("type")=="password"?"":get("input").value))
 				if(prompted){
 					setPrompt()
 					prompted=false;
 					promptCallback(get("input").value)
-				} else {
-					if(get("input").value.trim()!="")
-						process(get("input").value);
+				} else if(get("input").value.trim()!=""){
+					process(get("input").value);
+					cmdHistory.push(get("input").value)
 				}
 				get("input").value='';
 				get("output").scrollTo(0, get("output").scrollHeight);
 			}
+			if(ev.key=="ArrowUp"){
+				ev.preventDefault();
+				if(historyCursor<cmdHistory.length)
+					historyCursor+=1;
+				let newValue=cmdHistory[cmdHistory.length-historyCursor]
+				if(newValue && (get("input").value != newValue)){
+					let valLength=newValue.length
+					get("input").value=newValue
+					get("input").setSelectionRange(valLength,valLength)
+				}
+			}
+			if(ev.key=="ArrowDown"){
+				ev.preventDefault();
+				if(historyCursor>0)
+					historyCursor-=1;
+				let newValue=cmdHistory[cmdHistory.length-historyCursor]
+				if(historyCursor==0)
+					get("input").value="";
+				else if(newValue && (get("input").value != newValue)){
+					let valLength=newValue.length
+					get("input").value=newValue
+					get("input").setSelectionRange(valLength,valLength)
+				}
+			}
 		}
 	
 	//focus on the input element as the window finishes loading
+		disablePrompt();
 		setPrompt("");
-		await typeout("Welcome to CLI v1.0\n",30)
-		await typeout("You are currently not logged in.\n",30)
-		await typeout("Type \"help\" to see a list of available commands\n",30)
+		println("login");
+		print("username: ");
+		await sleep(500)
+		await typeout("jhunter",100)
+		await sleep(200)
+		println();
+		print("password: ");
+		await sleep(500)
+		await typeout("*********",100)
+		await sleep(300)
+		println();
+		println();
+		println("Successfully logged in as jhunter.")
+		println("You have "+Mail.countByState("unread")+" unread mail.")
 		println();
 		setPrompt();
-
+		enablePrompt();
 		get("input").focus();
 	}
 	

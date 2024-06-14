@@ -14,7 +14,7 @@ Help = {
 			if(params[0] in avComms){
 				avComms[params[0]].helpPage()
 			} else {
-				println("Help page for command \""+params[0]+"\" not found","color:#ff0");
+				print("Help page for command \""+params[0]+"\" not found","color:#ff0");
 			}
 		} else {
 			println("Here's a list of available commands:");
@@ -134,24 +134,25 @@ Memo={
 	name:"memo",
 	description:"Notetaking manager. Create, read, edit, or delete memos.",
 	helpPage:()=>{
-		println("MEMO &lt;NEW message|SHOW [X]|EDIT X message|DELETE X|SWAP X Y&gt;");
-		println("Manager for notetaking. Each subcommand manages the memos in the following way:");
+		println("MEMO &lt;NEW message|SHOW [X]|EDIT X message|DELETE X|SWAP X Y|SEARCH X&gt;");
+		println("Manager for notetaking. Each option manages the memos in the following way:");
 		println("  NEW     Create a new memo, and add it to the end of the memo list");
 		println("  SHOW    Show the Xth memo. If X is not present, show all memos");
 		println("  EDIT    Replaces de Xth memo with the new message");
 		println("  DELETE  Remove the Xth memo from the memo list");
 		println("  SWAP    Swaps the position of the Xth and Yth memos");
+		println("  SEARCH  Shows all memos that contain the text X");
 	},
-	memos:[],
+	memos:[""],
 	execute:(params)=>{
-		if(params.length==0) println("Missing option. Use \"help memo\" to see a list of available options.","color:#ff0")
+		if(params.length==0) print("Missing option. Use \"help memo\" to see a list of available options.","color:#ff0")
 		else{
 			switch(params[0].toLowerCase()){
 				case "new":
 					if(params.length>1)
 						Memo.memos.push(params.slice(1).join(" "))
 					else
-						println("Empty memo not stored. Type the content of your memo after \"new\"","color:#ff0")
+						print("Empty memo not stored. Type the content of your memo after \"new\"","color:#ff0")
 					break;
 				case "show":
 					if(parseInt(params[1])!="NaN" && parseInt(params[1])>0)
@@ -166,13 +167,13 @@ Memo={
 					if(parseInt(params[1])!="NaN" && parseInt(params[1])>0 && parseInt(params[1])<=Memo.memos.length)
 						Memo.memos[parseInt(params[1]-1)]=params.slice(1).join(" ")
 					else
-						println("No such memo found","color:#ff0")
+						print("No such memo found","color:#ff0")
 					break;
 				case "delete":
 					if(parseInt(params[1])!="NaN" && parseInt(params[1])>0 && parseInt(params[1])<=Memo.memos.length)
 						Memo.memos.splice(parseInt(params[1]-1),1)
 					else
-						println("No such memo found","color:#ff0")
+						print("No such memo found","color:#ff0")
 					break;
 				case "swap":
 					if(parseInt(params[1])!="NaN" && parseInt(params[1])>0 && parseInt(params[1])<=Memo.memos.length &&
@@ -181,7 +182,114 @@ Memo={
 						Memo.memos[parseInt(params[2])-1]=Memo.memos[parseInt(params[1])-1]
 						Memo.memos[parseInt(params[1])-1]=temp
 					} else
-						println("No such memo found","color:#ff0")
+						print("No such memo found","color:#ff0")
+					break;
+				case "search":
+					if(params.length>1){
+						if(Memo.memos.length==0){
+							print("There are no memos. Use \"memo new\" to create a new memo.","color:#ff0")
+						} else {
+							let found=false;
+							for(let i=1;i<=Memo.memos.length;i++){
+								if(Memo.memos[i-1].indexOf(params[1])!=-1){
+									let memo=Memo.memos[i-1]
+									print(i+". ")
+									let lastIndex=0;
+									while(memo.indexOf(params[1])!=-1){
+										let index=memo.indexOf(params[1])
+										print(memo.substring(0, index))
+										print(memo.substring(index,index+params[1].length),"background:#fff;color:#000")
+										memo=memo.substring(index+params[1].length,memo.length)
+									}
+									println(memo)
+									found=true;
+								}
+							}
+							if(!found)
+								println("Text not found in any memos.","color:#ff0")
+						}
+					} else {
+						print("No search performed. Type the text you're looking for after \"search\"","color:#ff0")
+					}
+					break;
+				default:
+					print("Option \""+params[0]+"\" not found. Use \"help memo\" to see a list of available options.","color:#ff0")
+					break;
+			}
+		}
+		println()
+	}
+}
+
+Mail = {
+	name:"mail",
+	description:"Email manager. Send or read received emails.",
+	helpPage:()=>{
+		println("MAIL &lt;LIST|OPEN X|COMPOSE&gt;");
+		println("Manager for emails:");
+		println("  LIST     Show a list of all emails. A symbol between \"[ \"] shows its state:");
+		println("             [ ] Incoming, unopened");
+		println("             [X] Incoming, opened");
+		println("             [>] Outgoing, sent");
+		println("  OPEN     Print the contents of the Xth mail.");
+		println("  COMPOSE  Open the mail compose menu. Prompts you for a recipient, a subject, and the content.");
+	},
+	mails:[
+		{"sender":"amroyce@mail.com",
+		 "subject":"Service Request",
+		 "state":"unread",
+		 "content":
+			["To Detective Hunter:",
+			 "My name is Amelia Royce, and I have heard from a friend of the services you provide.",
+			 "From what I've heard, you are very hard to locate, and even harder to convince, but please",
+			 "hear my case, for I am desperate.",
+			 " - Amelia Royce"]},
+	],
+	countByState:(state)=>{
+		let a=0;
+		for(mail of Mail.mails) if(mail.state==state) a++;
+		return a;
+	},
+	execute:(params)=>{
+		if(params.length==0) print("Missing option. Use \"help mail\" to see a list of available options.","color:#ff0")
+		else{
+			switch(params[0].toLowerCase()){
+				case "list":
+					let indexPadding = Mail.mails.length.toString().length+2;
+					let i=1;
+					for(mail of Mail.mails){
+						print((i+".").padEnd(indexPadding," "))
+						switch(mail.state){
+							case "unread": print("[ ]"); break;
+							case "opened": print("[X]"); break;
+							case "sent":   print("[>]"); break;
+							default:       print("[?]"); break;
+						}
+						subPrint=mail.subject;
+						if(subPrint.length>20) subPrint=subPrint.substring(0,17)+"...";
+						print(" "+subPrint.padEnd(21," "))
+						print("| "+mail.sender)
+						println()
+					}
+					break;
+				case "open":
+					if(parseInt(params[1])!="NaN" && parseInt(params[1])>0){
+						let mail = Mail.mails[parseInt(params[1]-1)]
+						mail.state="opened";
+						println("From   : "+mail.sender)
+						println("Subject: "+mail.subject)
+						println("".padEnd(Math.max(mail.sender.length,mail.subject.length)+9,"-"));
+						for(line of mail.content){
+							println(line)
+						}
+					} else 
+						print("No such mail found","color:#ff0")
+					break;
+				case "compose":
+					print("Compose email. prompt for recipient, then subject, then content")
+					break;
+				default:
+					print("Option \""+params[0]+"\" not found. Use \"help mail\" to see a list of available options.","color:#ff0")
 					break;
 			}
 		}
